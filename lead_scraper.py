@@ -2,7 +2,7 @@ import re
 import time
 import requests
 from bs4 import BeautifulSoup
-from googlesearch import search
+from ddgs import DDGS
 import json
 from urllib.parse import urljoin, urlparse
 from openpyxl import Workbook
@@ -33,17 +33,22 @@ class LeadScraper:
         return list(set(phones))
     
     def google_dork_search(self, query, location, num_results=5):
-        """Search Google with dorking"""
-        dork_query = f'{query} {location} (email OR kontak OR "hubungi kami" OR telepon)'
-        print(f"[DORK] Searching: {dork_query}")
+        """Search using DuckDuckGo (free, no rate limit)"""
+        search_query = f'{query} {location} (email OR kontak OR "hubungi kami" OR telepon)'
+        print(f"[SEARCH] Searching: {search_query}")
         
         try:
             results = []
-            for url in search(dork_query, num_results=num_results, lang="id", sleep_interval=5):
-                if url not in self.seen_urls:
-                    self.seen_urls.add(url)
-                    results.append(url)
-                    print(f"  Found: {url}")
+            with DDGS() as ddgs:
+                search_results = ddgs.text(search_query, region='id-id', max_results=num_results)
+                for result in search_results:
+                    url = result['href']
+                    if url not in self.seen_urls:
+                        self.seen_urls.add(url)
+                        results.append(url)
+                        print(f"  Found: {url}")
+            
+            time.sleep(2)  # Polite delay
             return results
         except Exception as e:
             print(f"  Error: {e}")
