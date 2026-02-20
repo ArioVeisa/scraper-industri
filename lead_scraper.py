@@ -32,14 +32,14 @@ class LeadScraper:
             phones.extend(re.findall(pattern, text))
         return list(set(phones))
     
-    def google_dork_search(self, query, location, num_results=10):
+    def google_dork_search(self, query, location, num_results=5):
         """Search Google with dorking"""
         dork_query = f'{query} {location} (email OR kontak OR "hubungi kami" OR telepon)'
         print(f"[DORK] Searching: {dork_query}")
         
         try:
             results = []
-            for url in search(dork_query, num_results=num_results, lang="id", sleep_interval=3):
+            for url in search(dork_query, num_results=num_results, lang="id", sleep_interval=5):
                 if url not in self.seen_urls:
                     self.seen_urls.add(url)
                     results.append(url)
@@ -111,14 +111,14 @@ class LeadScraper:
             print(f"  Error crawling {url}: {e}")
             return None
     
-    def scrape_category(self, business_query, location):
+    def scrape_category(self, business_query, location, num_results=5):
         """Scrape satu kategori bisnis di satu lokasi"""
         print(f"\n{'='*60}")
         print(f"Target: {business_query} - {location}")
         print(f"{'='*60}")
         
         # Google Dork Search
-        urls = self.google_dork_search(business_query, location, num_results=15)
+        urls = self.google_dork_search(business_query, location, num_results=num_results)
         
         # Crawl each URL
         for url in urls:
@@ -131,18 +131,26 @@ class LeadScraper:
                 print(f"  ✓ Emails: {len(data['emails'])}, Phones: {len(data['phones'])}")
             time.sleep(2)  # Rate limiting
     
-    def run_full_scrape(self, include_micro=True):
+    def run_full_scrape(self, include_micro=True, results_per_category=5, max_categories=None):
         """Run full scraping campaign"""
         all_queries = BUSINESS_QUERIES.copy()
         if include_micro:
             all_queries.extend(MICRO_BUSINESS_QUERIES)
         
+        # Limit categories if specified
+        if max_categories:
+            all_queries = all_queries[:max_categories]
+        
+        total_searches = len(all_queries) * len(LOCATIONS)
         print("Starting Lead Scraping Campaign...")
-        print(f"Targets: {len(all_queries)} categories × {len(LOCATIONS)} locations")
+        print(f"Targets: {len(all_queries)} categories × {len(LOCATIONS)} locations = {total_searches} searches")
+        print(f"Results per category: {results_per_category}")
+        print(f"Estimated URLs to crawl: ~{total_searches * results_per_category}")
+        print(f"Estimated time: ~{(total_searches * results_per_category * 7) // 60} minutes\n")
         
         for location in LOCATIONS:
             for query in all_queries:
-                self.scrape_category(query, location)
+                self.scrape_category(query, location, num_results=results_per_category)
         
         print(f"\n{'='*60}")
         print(f"SCRAPING COMPLETE: {len(self.results)} leads found")
@@ -223,6 +231,8 @@ if __name__ == "__main__":
     parser.add_argument('--locations', '-l', nargs='+', help='Custom locations (e.g., -l Surabaya Malang)')
     parser.add_argument('--no-micro', action='store_true', help='Skip micro business queries')
     parser.add_argument('--output', '-o', default='erp_leads.xlsx', help='Output filename')
+    parser.add_argument('--results', '-r', type=int, default=5, help='Results per category (default: 5)')
+    parser.add_argument('--max-categories', '-m', type=int, help='Limit number of categories to scrape')
     
     args = parser.parse_args()
     
@@ -233,6 +243,10 @@ if __name__ == "__main__":
         print(f"Custom locations: {', '.join(args.locations)}")
     
     scraper = LeadScraper()
-    scraper.run_full_scrape(include_micro=not args.no_micro)
+    scraper.run_full_scrape(
+        include_micro=not args.no_micro,
+        results_per_category=args.results,
+        max_categories=args.max_categories
+    )
     scraper.export_excel(args.output)
     scraper.export_json(args.output.replace('.xlsx', '.json'))

@@ -25,9 +25,24 @@ pip install -r requirements.txt
 
 ### 2. Run Scraper
 
-**Default (Surabaya, Sidoarjo, Gresik):**
+**Default (5 hasil per kategori, ~20 menit):**
 ```bash
 python lead_scraper.py
+```
+
+**Quick Test (3 hasil per kategori, ~12 menit):**
+```bash
+python lead_scraper.py -r 3
+```
+
+**Deep Scrape (10 hasil per kategori, ~40 menit):**
+```bash
+python lead_scraper.py -r 10
+```
+
+**Test Mode (10 kategori pertama aja):**
+```bash
+python lead_scraper.py -m 10 -r 3
 ```
 
 **Custom Lokasi:**
@@ -54,7 +69,11 @@ python lead_scraper.py -o hasil_surabaya.xlsx
 
 **Kombinasi:**
 ```bash
-python lead_scraper.py -l Malang Batu --no-micro -o leads_malang.xlsx
+# Malang only, no micro, 3 results per category
+python lead_scraper.py -l Malang --no-micro -r 3 -o leads_malang.xlsx
+
+# Test 5 kategori pertama, 2 results each
+python lead_scraper.py -m 5 -r 2 -o test.xlsx
 ```
 
 Script akan:
